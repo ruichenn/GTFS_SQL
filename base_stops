@@ -1,0 +1,38 @@
+
+/*
+Create a table  with stops served by local bus routes, community bus routes,
+ferry routes, commuter bus routes, commuter rail routes, key bus routes, and
+rapid transit routes.
+
+Except for supplemental bus routes, airport shuttle, rail replacement bus 
+and bus for limited service others will be counted in the base coverage calculations.
+*/
+
+DROP TABLE IF EXISTS base_stop1;
+CREATE TABLE base_stop1 AS
+SELECT DISTINCT r.route_short_name, s.stop_name, s.the_geom
+FROM gtfs_stop_times AS st,
+gtfs_stops AS s,
+gtfs_trips AS t,
+gtfs_routes AS r
+WHERE 
+s.stop_id = st.stop_id AND
+st.trip_id = t.trip_id AND
+t.route_id = r.route_id AND
+(route_desc = 'Community Bus' OR route_desc = 'Local Bus' 
+ OR route_desc = 'Ferry' OR route_desc = 'Commuter Bus'
+ OR route_desc = 'Commuter Rail' OR route_desc = 'Rapid Transit' 
+ OR route_desc = 'Key Bus');
+SELECT* FROM base_stop1; 
+/*
+Select a 800 meter (~half-mile buffer) around frequent stops, then union.
+CRS 2163 = US National Atlas Equal-Area projection
+*/
+DROP TABLE IF EXISTS base_buffer;
+CREATE TABLE base_buffer AS
+SELECT ST_UNION(
+  ST_BUFFER(
+  ST_TRANSFORM(the_geom,2163)
+  ,800) -- 800 m
+) FROM base_stop1;
+SELECT * FROM base_buffer; 
